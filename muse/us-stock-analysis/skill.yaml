@@ -1,0 +1,5 @@
+name: "us-stock-analysis"
+title: "US Stock Analysis"
+description: "Comprehensive US stock analysis: fundamental analysis (financial metrics, business quality, valuation), technical analysis (indicators, chart patterns, support/resistance), stock comparisons, and investment report generation. Data comes from verified local scripts (Yahoo Finance chart data and SEC EDGAR filings) first, web search second."
+category: "Work and knowledge"
+include_in_prompt: true
