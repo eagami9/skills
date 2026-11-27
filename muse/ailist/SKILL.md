@@ -5,29 +5,30 @@ description: Read and update an AIList household shopping list through its REST 
 
 # AIList
 
-AIList (https://ai-list.web.app) is a shared household shopping-list app. An agent works with one household's lists through its REST API v1. The API key is created in the household settings in the app (owner only) and is shown once at creation; the user gives it to the agent. Every request sends it in the `X-API-Key` header.
+AIList (https://ai-list.web.app) is a shared household shopping-list app. An agent works with the user's lists through its REST API v1. The API key is personal: each user creates their own in the app under Settings → "My API keys" (shown once at creation); the user gives it to the agent. It works in every household the user belongs to, subject to each household's agent-access setting (none / read / write, set by the household owner, default write). Household API keys are the legacy path: existing ones still work for that one household, but new household keys can no longer be created (since 27 Nov 2026). Every request sends the key in the `X-API-Key` header.
 
 Base URL: https://ai-list.web.app/api/v1
-Auth: `X-API-Key` header with the household API key.
-Errors: no key or a bad key returns 401; a bad request body returns 400; a list, item or category not found in this household returns 404.
+Auth: `X-API-Key` header with the user's personal API key.
+Errors: no key or a bad key returns 401; a household with agent access "none" is not listed, and a write against a read-only household returns 403; a bad request body returns 400; a list, item or category not found in this household returns 404.
 Full OpenAPI spec: https://ai-list.web.app/openapi.json
 Guides: https://ai-list.web.app/guides
 
 ## Workflow
 
-- Before every shopping trip, GET /lists and then GET /lists/{id} to see what is still unchecked.
+- Before every shopping trip, GET /lists and then GET /lists/{id}?checked=false to see only what is still unchecked (still to buy). `uncheckedCount` on a list already says how many items are left to buy, without pulling the list. Checked items are the ones already bought.
 - Add items with POST /lists/{id}/items; the app auto-categorizes each item (household product dictionary first, then a general dictionary, then "אחר").
+- Re-adding an item that is already on the list but checked just unchecks it, putting it back on the to-buy list. Do it without narrating that it was already there.
 - Check items with POST /lists/{id}/items/{itemId}/check, uncheck with POST /lists/{id}/items/{itemId}/uncheck.
 - Edit with PATCH /lists/{id}/items/{itemId}; move an item to another category with POST /lists/{id}/items/{itemId}/move; delete with DELETE /lists/{id}/items/{itemId}.
 
 ## Endpoints
 
-- GET /lists — the household's lists with item counts (id, title, emoji, type, totalCount, uncheckedCount). List types: shopping, todo, packing, generic.
-- GET /lists/{id} — the full list: categories and items.
+- GET /lists — the user's lists with item counts (id, title, emoji, type, totalCount, uncheckedCount, householdId, householdName). List types: shopping, todo, packing, generic.
+- GET /lists/{id} — the full list: categories and items. `?checked=false` returns only the items still to buy, `?checked=true` only the bought ones; totalCount/uncheckedCount always describe the whole list.
 - GET /lists/{id}/categories — the list's categories.
 - GET /lists/{id}/items/{itemId} — one item.
-- POST /lists/{id}/items — body: {text, quantity?, unit?, barcode?}. Returns the item with categoryId and categoryName.
-- PATCH /lists/{id}/items/{itemId} — any of: checked, text, quantity, unit, categoryId, barcode (null clears quantity, unit or barcode).
+- POST /lists/{id}/items — body: {text, quantity?, unit?, barcode?, note?, icon?}. Returns the item with categoryId and categoryName.
+- PATCH /lists/{id}/items/{itemId} — any of: checked, text, quantity, unit, categoryId, barcode, note, icon (null clears quantity, unit, barcode or note; icon null goes back to the automatic icon).
 - DELETE /lists/{id}/items/{itemId} — returns {"ok": true}.
 - POST /lists/{id}/items/{itemId}/move — body: {categoryId}. Moving also teaches the household dictionary, so the same product lands in the new category next time.
 - POST /lists/{id}/items/{itemId}/check — shortcut for PATCH {"checked": true}.
